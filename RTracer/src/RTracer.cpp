@@ -2,9 +2,10 @@
 #include "Walnut/EntryPoint.h"
 
 #include "Walnut/Image.h"
-#include "Walnut/Random.h"
 #include "Walnut/Timer.h"
 #include "glm/glm.hpp"
+
+#include "Renderer.h"
 
 using namespace Walnut;
 
@@ -27,9 +28,10 @@ public:
 		m_ViewportWidth = ImGui::GetContentRegionAvail().x;
 		m_ViewportHeight = ImGui::GetContentRegionAvail().y;
 
-
-		if (m_Image)
-			ImGui::Image(m_Image->GetDescriptorSet(), { (float)m_Image->GetWidth(), (float)m_Image->GetHeight() });
+		auto image = m_Renderer.GetFinalImage();
+		if (image)
+			ImGui::Image(image->GetDescriptorSet(), { (float)image->GetWidth(), (float)image->GetHeight() },
+				ImVec2(0, 1), ImVec2(1, 0)); // flip uv's
 
 		ImGui::End();
 		ImGui::PopStyleVar();
@@ -40,28 +42,14 @@ public:
 	{
 		Timer timer;
 
-		if (!m_Image || m_ViewportWidth != m_Image->GetWidth() || m_ViewportHeight != m_Image->GetHeight())
-		{
-			m_Image = std::make_shared<Image>(m_ViewportWidth, m_ViewportHeight, ImageFormat::RGBA);
-			delete[] m_ImageData;
-			m_ImageData = new uint32_t[m_ViewportWidth * m_ViewportHeight];
-		}
+		m_Renderer.OnResize(m_ViewportWidth, m_ViewportHeight);
+		m_Renderer.Render();
 
-		for (size_t y = 0; y < m_ViewportHeight; y++)
-		{
-			for (size_t x = 0; x < m_ViewportWidth; x++)
-			{
-				m_ImageData[x + y * m_ViewportWidth] = 0xffff0070;
-			}
-		}
-
-		m_Image->SetData(m_ImageData);
 
 		m_LastRenderTime = timer.ElapsedMillis();
 	}
 private:
-	std::shared_ptr<Image> m_Image;
-	uint32_t* m_ImageData = nullptr;
+	Renderer m_Renderer;
 	uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
 
 	float m_LastRenderTime = 0.0f;
